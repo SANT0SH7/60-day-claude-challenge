@@ -1,0 +1,13 @@
+👋 Hey, I'm Santosh Kumar — B.Tech student & tech enthusiast.
+💻 I code in C | C++ | Python | Java | React
+🧠 Sharpening my DSA skills daily
+🌐 Building projects in Web Development
+🏆 IIT Delhi CEO Challenge 2026 participant
+📜 Coursera certified in Java, Python, C, Web Dev, React & Cybersecurity
+📫 Reach me: santoshk9810734@gmail.com
+
+---
+
+## My Resume
+
+![Santosh Kumar - Resume](./day6-resume.jpg)
