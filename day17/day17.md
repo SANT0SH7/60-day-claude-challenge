@@ -1,24 +1,33 @@
-🚗 Day 17: Vehicle Cost Analysis Dashboard
+# Vehicle Cost Analysis Dashboard
 
-Just built a complete data analytics dashboard using Claude + HTML visualization!
+A data-driven HTML dashboard for analyzing vehicle costs, fuel efficiency, and economic comparisons using Claude AI.
 
-What it does:
-✅ Analyzes vehicle datasets (CSV) with no coding
-✅ Calculates fuel costs, maintenance expenses & KPIs
-✅ Compares petrol vs diesel vs E85 economics
-✅ Generates break-even analysis & cost projections
-✅ Creates interactive SVG charts & gauges
-✅ Works in browser - no installation needed
+## What This Dashboard Does
+- Analyzes vehicle datasets (CSV format) without coding
+- Calculates comprehensive business metrics & KPIs
+- Compares fuel types (petrol, diesel, E85) with cost breakdowns
+- Visualizes maintenance costs and fuel consumption trends
+- Generates E85 economics & break-even analysis
+- Interactive SVG charts and gauges for real-time insights
 
-The surprising insight? 🔍 Data visualization transformed raw numbers into actionable business intelligence instantly.
+## Tech Stack
+- Claude AI (CSV analysis & prompt-based generation)
+- HTML5 + CSS3 (responsive design)
+- SVG Graphics (interactive charts & gauges)
+- Business Intelligence metrics
 
-This is what happens when you combine:
-- Data analysis (Claude)
-- Visualization (SVG/HTML)
-- Business metrics (KPI calculations)
+## Key Features
+✅ No-code data analysis pipeline  
+✅ Complete HTML dashboard with KPI cards  
+✅ Fuel cost comparison engine  
+✅ Maintenance & environmental impact analysis  
+✅ E85 break-even economics calculator  
+✅ Browser-ready (open & use instantly)
 
-Real-world applicable for fleet management, logistics, and cost optimization.
+## Learning Outcomes
+- CSV data analysis without Python/SQL
+- Dashboard design & data visualization
+- Business metrics calculation & interpretation
+- Real-world analytics use case
 
-🔗 [Link to GitHub Repo]
-
-#DataVisualization #BusinessAnalytics #ClaudeAI #HTMLDashboard #60DayChallenge #DataDriven #MotorIndustry
+**Part of 60 Day AI Challenge - Building one AI tool daily**
