@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prior Authorization Workflow Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #000;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        /* Progress Tracker */
+        .progress-tracker {
+            background: #f5f5f5;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            padding: 10px;
+            min-width: 100px;
+        }
+
+        .progress-step::before {
+            content: '';
+            width: 40px;
+            height: 40px;
+            background: #ccc;
+            border-radius: 50%;
+            display: block;
+            margin: 0 auto 8px;
+            line-height: 40px;
+            font-weight: bold;
+        }
+
+        .progress-step.active::before {
+            background: #1976d2;
+            color: white;
+            content: '✓';
+            font-size: 20px;
+        }
+
+        .progress-step.current::before {
+            background: #42a5f5;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .progress-step span {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #000;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            background: #e3f2fd;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-around;
+            border-bottom: 2px solid #90caf9;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #1565c0;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #000;
+            margin-top: 5px;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 30px;
+        }
+
+        /* Scenario Selection */
+        .scenario-selection {
+            background: #e3f2fd;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border: 2px solid #90caf9;
+        }
+
+        .scenario-selection h2 {
+            color: #1565c0;
+            margin-bottom: 15px;
+        }
+
+        .scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .scenario-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #90caf9;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .scenario-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            border-color: #1976d2;
+        }
+
+        .scenario-card h3 {
+            color: #1565c0;
+            margin-bottom: 10px;
+        }
+
+        .scenario-card p {
+            font-size: 0.9em;
+            color: #000;
+        }
+
+        /* Workflow Area */
+        .workflow-area {
+            display: none;
+        }
+
+        .workflow-area.active {
+            display: block;
+        }
+
+        .lanes-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .lane {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            border: 2px solid #90caf9;
+            min-height: 400px;
+        }
+
+        .lane h3 {
+            color: #1565c0;
+            margin-bottom: 15px;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #90caf9;
+        }
+
+        .lane-patient {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f5f5f5 100%);
+        }
+
+        .lane-provider {
+            background: linear-gradient(135deg, #bbdefb 0%, #f5f5f5 100%);
+        }
+
+        .lane-payer {
+            background: linear-gradient(135deg, #90caf9 0%, #f5f5f5 100%);
+        }
+
+        /* Case Card */
+        .case-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #1976d2;
+            margin-bottom: 15px;
+            cursor: move;
+            transition: all 0.3s ease;
+        }
+
+        .case-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .case-card.dragging {
+            opacity: 0.5;
+        }
+
+        .case-card h4 {
+            color: #1565c0;
+            margin-bottom: 8px;
+        }
+
+        .case-info {
+            font-size: 0.9em;
+            color: #000;
+            margin-bottom: 5px;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            border: 2px dashed #90caf9;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 100px;
+            margin-top: 15px;
+            text-align: center;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.drag-over {
+            background: #e3f2fd;
+            border-color: #1976d2;
+            border-style: solid;
+        }
+
+        /* Action Buttons */
+        .action-section {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 2px solid #90caf9;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .btn-primary {
+            background: #1976d2;
+        }
+
+        .btn-primary:hover {
+            background: #1565c0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary {
+            background: #42a5f5;
+        }
+
+        .btn-secondary:hover {
+            background: #1e88e5;
+        }
+
+        .btn-success {
+            background: #0288d1;
+        }
+
+        .btn-success:hover {
+            background: #0277bd;
+        }
+
+        .btn-danger {
+            background: #1565c0;
+        }
+
+        .btn-danger:hover {
+            background: #0d47a1;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Educational Panel */
+        .education-panel {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #1976d2;
+            display: none;
+        }
+
+        .education-panel.active {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .education-panel h3 {
+            color: #1565c0;
+            margin-bottom: 10px;
+        }
+
+        .education-panel p {
+            color: #000;
+            line-height: 1.6;
+        }
+
+        /* Document Checklist */
+        .document-checklist {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .document-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+        }
+
+        .document-item input[type="checkbox"] {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .document-item label {
+            cursor: pointer;
+            color: #000;
+        }
+
+        /* Celebration Animation */
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #1976d2;
+            animation: confetti-fall 3s ease-out forwards;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Summary Panel */
+        .summary-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 3px solid #1976d2;
+            display: none;
+        }
+
+        .summary-panel.active {
+            display: block;
+        }
+
+        .summary-panel h2 {
+            color: #1565c0;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .summary-stat {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .summary-stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #1565c0;
+        }
+
+        .summary-stat-label {
+            font-size: 1em;
+            color: #000;
+            margin-top: 10px;
+        }
+
+        /* Timeline */
+        .timeline {
+            margin-top: 30px;
+        }
+
+        .timeline-item {
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #f5f5f5;
+            border-left: 4px solid #1976d2;
+            border-radius: 4px;
+        }
+
+        .timeline-item strong {
+            color: #1565c0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 968px) {
+            .lanes-container {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .progress-tracker {
+                flex-direction: column;
+            }
+
+            .progress-step {
+                width: 100%;
+            }
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h3 {
+            color: #1565c0;
+            margin-bottom: 15px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        /* Review Options */
+        .review-options {
+            display: grid;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .review-option {
+            padding: 15px;
+            background: #f5f5f5;
+            border: 2px solid #90caf9;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .review-option:hover {
+            background: #e3f2fd;
+            border-color: #1976d2;
+        }
+
+        .review-option h4 {
+            color: #1565c0;
+            margin-bottom: 5px;
+        }
+
+        .review-option p {
+            font-size: 0.9em;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏥 Prior Authorization Workflow Simulator</h1>
+            <p>Learn the PA process through interactive, gamified simulation</p>
+        </header>
+
+        <!-- Progress Tracker -->
+        <div class="progress-tracker">
+            <div class="progress-step" id="step-select">
+                <span>Select Patient</span>
+            </div>
+            <div class="progress-step" id="step-assess">
+                <span>Medical Necessity</span>
+            </div>
+            <div class="progress-step" id="step-documents">
+                <span>Collect Documents</span>
+            </div>
+            <div class="progress-step" id="step-submit">
+                <span>Submit to Payer</span>
+            </div>
+            <div class="progress-step" id="step-review">
+                <span>Payer Review</span>
+            </div>
+            <div class="progress-step" id="step-outcome">
+                <span>Final Outcome</span>
+            </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-value" id="days-elapsed">0</div>
+                <div class="stat-label">Days Elapsed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="efficiency-score">100</div>
+                <div class="stat-label">Efficiency Score</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="documents-collected">0/0</div>
+                <div class="stat-label">Documents Collected</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Scenario Selection -->
+            <div class="scenario-selection active" id="scenario-selection">
+                <h2>Select a Patient Scenario</h2>
+                <p>Choose a patient case to begin the prior authorization workflow simulation.</p>
+                <div class="scenario-grid" id="scenario-grid"></div>
+            </div>
+
+            <!-- Workflow Area -->
+            <div class="workflow-area" id="workflow-area">
+                <div class="action-section">
+                    <h3>Current Step: <span id="current-step-name">Getting Started</span></h3>
+                    <div class="action-buttons" id="action-buttons"></div>
+                </div>
+
+                <div class="lanes-container">
+                    <div class="lane lane-patient">
+                        <h3>👤 Patient</h3>
+                        <div id="patient-lane"></div>
+                    </div>
+                    <div class="lane lane-provider">
+                        <h3>👨‍⚕️ Provider</h3>
+                        <div id="provider-lane"></div>
+                    </div>
+                    <div class="lane lane-payer">
+                        <h3>🏢 Payer (Insurance)</h3>
+                        <div id="payer-lane"></div>
+                    </div>
+                </div>
+
+                <!-- Educational Panel -->
+                <div class="education-panel" id="education-panel"></div>
+
+                <!-- Summary Panel -->
+                <div class="summary-panel" id="summary-panel"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content" id="modal-content"></div>
+    </div>
+
+    <!-- Celebration Container -->
+    <div class="celebration" id="celebration"></div>
+
+    <script>
+        // ===========================
+        // SCENARIO DATA
+        // ===========================
+        const SCENARIOS = [
+            {
+                id: 'surgery',
+                title: 'Elective Knee Surgery',
+                description: 'Patient needs knee replacement surgery due to severe osteoarthritis',
+                procedure: 'Total Knee Arthroplasty',
+                diagnosis: 'Severe Osteoarthritis',
+                urgency: 'elective',
+                complexity: 'medium',
+                requiredDocuments: [
+                    'X-ray imaging showing joint degeneration',
+                    'Physical therapy records (6 months)',
+                    'Orthopedic surgeon consultation notes',
+                    'Failed conservative treatment documentation',
+                    'Medical history and current medications'
+                ],
+                reviewTime: 5,
+                approvalChance: 0.75
+            },
+            {
+                id: 'mri',
+                title: 'MRI Scan',
+                description: 'Patient experiencing chronic lower back pain requiring diagnostic imaging',
+                procedure: 'Lumbar Spine MRI',
+                diagnosis: 'Chronic Lower Back Pain',
+                urgency: 'routine',
+                complexity: 'low',
+                requiredDocuments: [
+                    'Primary care physician referral',
+                    'Physical examination notes',
+                    'Failed conservative treatment (6 weeks)',
+                    'Patient medical history',
+                    'Previous imaging results (if any)'
+                ],
+                reviewTime: 3,
+                approvalChance: 0.85
+            },
+            {
+                id: 'medication',
+                title: 'Specialty Medication',
+                description: 'Patient requires expensive biologic medication for rheumatoid arthritis',
+                procedure: 'Humira (Adalimumab) Injection',
+                diagnosis: 'Rheumatoid Arthritis',
+                urgency: 'urgent',
+                complexity: 'high',
+                requiredDocuments: [
+                    'Rheumatologist consultation notes',
+                    'Lab results (RF and Anti-CCP antibodies)',
+                    'Failed traditional DMARD therapy documentation',
+                    'Clinical assessment scores (DAS28)',
+                    'Insurance formulary check',
+                    'Step therapy completion proof'
+                ],
+                reviewTime: 7,
+                approvalChance: 0.65
+            },
+            {
+                id: 'admission',
+                title: 'Inpatient Admission',
+                description: 'Patient requires inpatient rehabilitation after stroke',
+                procedure: 'Acute Inpatient Rehabilitation',
+                diagnosis: 'Ischemic Stroke with Hemiparesis',
+                urgency: 'urgent',
+                complexity: 'high',
+                requiredDocuments: [
+                    'Hospital discharge summary',
+                    'Neurologist assessment',
+                    'Functional capacity evaluation',
+                    'Rehabilitation potential assessment',
+                    'Expected length of stay justification',
+                    'Interdisciplinary care plan'
+                ],
+                reviewTime: 4,
+                approvalChance: 0.80
+            }
+        ];
+
+        // ===========================
+        // EDUCATIONAL CONTENT
+        // ===========================
+        const EDUCATION = {
+            selectScenario: {
+                title: '📋 Understanding Prior Authorization',
+                content: 'Prior Authorization (PA) is a cost-control process used by health insurers to determine if they will cover a prescribed procedure, service, or medication. The process ensures medical necessity and appropriate care while controlling healthcare costs. You\'ve selected a patient case - now let\'s walk through the entire PA workflow step by step.'
+            },
+            medicalNecessity: {
+                title: '🔍 Evaluating Medical Necessity',
+                content: 'Medical necessity is the foundation of any prior authorization. Providers must demonstrate that the requested service is appropriate, necessary, and consistent with evidence-based medicine. This includes documenting diagnosis, failed alternative treatments, clinical guidelines compliance, and expected patient outcomes.'
+            },
+            documents: {
+                title: '📄 Document Collection Phase',
+                content: 'Complete and accurate documentation is critical for PA approval. Missing documents are the leading cause of delays and denials. Required documents typically include clinical notes, diagnostic test results, treatment history, and evidence of medical necessity. Each document serves to build the case for why the requested service is appropriate.'
+            },
+            submission: {
+                title: '📤 Submitting to the Payer',
+                content: 'The submission package must be complete and organized. Most payers offer multiple submission methods: online portals (fastest), fax, or phone. Electronic submissions typically provide tracking and faster response times. Always retain confirmation of submission and reference numbers.'
+            },
+            payerReview: {
+                title: '⏳ Payer Review Process',
+                content: 'Once submitted, the payer reviews the request against their coverage policies and medical necessity criteria. Standard reviews typically take 3-7 business days, while urgent requests may be expedited to 24-72 hours. The payer may approve, deny, or pend (request more information).'
+            },
+            approval: {
+                title: '✅ Authorization Approved!',
+                content: 'Congratulations! The prior authorization has been approved. The payer has determined that the requested service meets their criteria for medical necessity and coverage. The approval will include an authorization number, valid dates, and any special conditions. The patient can now proceed with the scheduled service.'
+            },
+            denial: {
+                title: '❌ Authorization Denied',
+                content: 'The request has been denied. Common reasons include: lack of medical necessity, insufficient documentation, service not covered under plan, or failure to meet step therapy requirements. The denial letter will explain the specific reason(s). Providers have the right to appeal with additional documentation or request a peer-to-peer review.'
+            },
+            pend: {
+                title: '⏸️ Request Pended',
+                content: 'The payer needs additional information before making a decision. This is very common and not a denial. Review the payer\'s request carefully, gather the missing information, and resubmit promptly. Pended requests can delay care, so quick response is important.'
+            },
+            appeal: {
+                title: '📢 Filing an Appeal',
+                content: 'If denied, you have the right to appeal. The appeal should include: a letter explaining why the decision should be reversed, additional clinical documentation, relevant clinical guidelines or research, and peer-reviewed literature supporting the request. Most payers have multiple levels of appeal.'
+            },
+            peerToPeer: {
+                title: '👥 Peer-to-Peer Review',
+                content: 'A peer-to-peer review allows the requesting provider to speak directly with the payer\'s medical director (a physician in the same or similar specialty). This conversation can clarify clinical details, discuss patient-specific factors, and often results in approval when documentation alone was insufficient.'
+            }
+        };
+
+        // ===========================
+        // STATE MANAGEMENT
+        // ===========================
+        let gameState = {
+            currentScenario: null,
+            currentStep: 0,
+            daysElapsed: 0,
+            efficiencyScore: 100,
+            documentsCollected: [],
+            timeline: [],
+            outcome: null,
+            steps: [
+                'selectScenario',
+                'medicalNecessity',
+                'documents',
+                'submission',
+                'payerReview',
+                'outcome'
+            ]
+        };
+
+        // ===========================
+        // INITIALIZATION
+        // ===========================
+        function init() {
+            renderScenarioSelection();
+            setupEventListeners();
+        }
+
+        function renderScenarioSelection() {
+            const grid = document.getElementById('scenario-grid');
+            grid.innerHTML = '';
+
+            SCENARIOS.forEach(scenario => {
+                const card = document.createElement('div');
+                card.className = 'scenario-card';
+                card.innerHTML = `
+                    <h3>${scenario.title}</h3>
+                    <p><strong>Procedure:</strong> ${scenario.procedure}</p>
+                    <p><strong>Diagnosis:</strong> ${scenario.diagnosis}</p>
+                    <p>${scenario.description}</p>
+                    <p style="margin-top: 10px; color: #1565c0;"><strong>Complexity:</strong> ${scenario.complexity.toUpperCase()}</p>
+                `;
+                card.addEventListener('click', () => selectScenario(scenario));
+                grid.appendChild(card);
+            });
+        }
+
+        function selectScenario(scenario) {
+            gameState.currentScenario = scenario;
+            gameState.currentStep = 1;
+            gameState.documentsCollected = [];
+            gameState.timeline.push({
+                day: 0,
+                event: `Patient case selected: ${scenario.title}`,
+                actor: 'Patient'
+            });
+
+            // Hide scenario selection, show workflow
+            document.getElementById('scenario-selection').classList.remove('active');
+            document.getElementById('workflow-area').classList.add('active');
+
+            // Update progress
+            updateProgressTracker();
+            updateStats();
+            
+            // Show initial case in patient lane
+            showPatientCase();
+            
+            // Show education
+            showEducation('selectScenario');
+            
+            // Set up step 1 actions
+            setupMedicalNecessityStep();
+        }
+
+        // ===========================
+        // WORKFLOW STEPS
+        // ===========================
+        function setupMedicalNecessityStep() {
+            document.getElementById('current-step-name').textContent = 'Medical Necessity Assessment';
+            
+            const actionsDiv = document.getElementById('action-buttons');
+            actionsDiv.innerHTML = `
+                <button class="btn-primary" onclick="evaluateMedicalNecessity()">Evaluate Medical Necessity</button>
+                <button class="btn-secondary" onclick="restartSimulation()">Restart Simulation</button>
+            `;
+
+            updateProgressTracker();
+        }
+
+        function evaluateMedicalNecessity() {
+            addDays(1);
+            gameState.timeline.push({
+                day: gameState.daysElapsed,
+                event: 'Provider evaluated medical necessity and clinical appropriateness',
+                actor: 'Provider'
+            });
+
+            showEducation('medicalNecessity');
+            
+            // Move to provider lane
+            const providerLane = document.getElementById('provider-lane');
+            providerLane.innerHTML = `
+                <div class="case-card">
+                    <h4>Medical Necessity Evaluation</h4>
+                    <div class="case-info">✅ Clinical guidelines reviewed</div>
+                    <div class="case-info">✅ Alternative treatments considered</div>
+                    <div class="case-info">✅ Medical necessity confirmed</div>
+                    <div class="case-info" style="margin-top: 10px; color: #1565c0;">
+                        <strong>Status:</strong> Ready for documentation
+                    </div>
+                </div>
+            `;
+
+            // Move to document collection
+            setTimeout(() => {
+                gameState.currentStep = 2;
+                setupDocumentCollection();
+            }, 1500);
+        }
+
+        function setupDocumentCollection() {
+            updateProgressTracker();
+            document.getElementById('current-step-name').textContent = 'Document Collection';
+            
+            const actionsDiv = document.getElementById('action-buttons');
+            actionsDiv.innerHTML = `
+                <button class="btn-primary" onclick="showDocumentChecklist()">Collect Required Documents</button>
+                <button class="btn-secondary" onclick="restartSimulation()">Restart Simulation</button>
+            `;
+
+            showEducation('documents');
+        }
+
+        function showDocumentChecklist() {
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            
+            const docs = gameState.currentScenario.requiredDocuments;
+            
+            let checklistHTML = '<h3>📄 Document Checklist</h3>';
+            checklistHTML += '<p>Select all documents to collect them for the PA submission:</p>';
+            checklistHTML += '<div class="document-checklist">';
+            
+            docs.forEach((doc, index) => {
+                checklistHTML += `
+                    <div class="document-item">
+                        <input type="checkbox" id="doc-${index}" onchange="updateDocumentCount()">
+                        <label for="doc-${index}">${doc}</label>
+                    </div>
+                `;
+            });
+            
+            checklistHTML += '</div>';
+            checklistHTML += '<div class="modal-buttons">';
+            checklistHTML += '<button class="btn-secondary" onclick="closeModal()">Cancel</button>';
+            checklistHTML += '<button class="btn-primary" id="submit-docs-btn" onclick="submitDocuments()" disabled>Submit Documents</button>';
+            checklistHTML += '</div>';
+            
+            modalContent.innerHTML = checklistHTML;
+            modal.classList.add('active');
+            
+            updateDocumentStats();
+        }
+
+        function updateDocumentCount() {
+            const total = gameState.currentScenario.requiredDocuments.length;
+            const checked = document.querySelectorAll('.document-item input:checked').length;
+            
+            document.getElementById('submit-docs-btn').disabled = checked < total;
+            
+            updateDocumentStats();
+        }
+
+        function updateDocumentStats() {
+            const total = gameState.currentScenario.requiredDocuments.length;
+            const checked = document.querySelectorAll('.document-item input:checked').length;
+            document.getElementById('documents-collected').textContent = `${checked}/${total}`;
+        }
+
+        function submitDocuments() {
+            const checkboxes = document.querySelectorAll('.document-item input:checked');
+            gameState.documentsCollected = Array.from(checkboxes).map(cb => 
+                cb.nextElementSibling.textContent
+            );
+            
+            const daysToCollect = Math.ceil(gameState.documentsCollected.length / 2);
+            addDays(daysToCollect);
+            
+            gameState.timeline.push({
+                day: gameState.daysElapsed,
+                event: `Collected ${gameState.documentsCollected.length} required documents`,
+                actor: 'Provider'
+            });
+
+            closeModal();
+            
+            // Update provider lane
+            const providerLane = document.getElementById('provider-lane');
+            providerLane.innerHTML = `
+                <div class="case-card">
+                    <h4>Documentation Package</h4>
+                    <div class="case-info">📋 ${gameState.documentsCollected.length} documents collected</div>
+                    <div class="case-info">✅ Package complete and verified</div>
+                    <div class="case-info" style="margin-top: 10px; color: #1565c0;">
+                        <strong>Status:</strong> Ready to submit to payer
+                    </div>
+                </div>
+            `;
+
+            gameState.currentStep = 3;
+            setupSubmissionStep();
+        }
+
+        function setupSubmissionStep() {
+            updateProgressTracker();
+            document.getElementById('current-step-name').textContent = 'Submit to Payer';
+            
+            const actionsDiv = document.getElementById('action-buttons');
+            actionsDiv.innerHTML = `
+                <button class="btn-primary" onclick="submitToPayer()">Submit Prior Authorization Request</button>
+                <button class="btn-secondary" onclick="restartSimulation()">Restart Simulation</button>
+            `;
+
+            showEducation('submission');
+        }
+
+        function submitToPayer() {
+            addDays(1);
+            gameState.timeline.push({
+                day: gameState.daysElapsed,
+                event: 'Prior authorization request submitted to payer via electronic portal',
+                actor: 'Provider'
+            });
+
+            // Move to payer lane
+            const payerLane = document.getElementById('payer-lane');
+            payerLane.innerHTML = `
+                <div class="case-card">
+                    <h4>PA Request Received</h4>
+                    <div class="case-info">📥 Submission received</div>
+                    <div class="case-info">🔍 Initial review in progress</div>
+                    <div class="case-info">⏳ Estimated review: ${gameState.currentScenario.reviewTime} days</div>
+                    <div class="case-info" style="margin-top: 10px; color: #1565c0;">
+                        <strong>Status:</strong> Under review
+                    </div>
+                </div>
+            `;
+
+            gameState.currentStep = 4;
+            setupPayerReviewStep();
+        }
+
+        function setupPayerReviewStep() {
+            updateProgressTracker();
+            document.getElementById('current-step-name').textContent = 'Payer Review';
+            
+            const actionsDiv = document.getElementById('action-buttons');
+            actionsDiv.innerHTML = `
+                <button class="btn-primary" onclick="simulatePayerReview()">Complete Payer Review (Fast Forward)</button>
+                <button class="btn-secondary" onclick="restartSimulation()">Restart Simulation</button>
+            `;
+
+            showEducation('payerReview');
+        }
+
+        function simulatePayerReview() {
+            addDays(gameState.currentScenario.reviewTime);
+            
+            // Determine outcome based on approval chance and efficiency
+            const random = Math.random();
+            const adjustedChance = gameState.currentScenario.approvalChance * (gameState.efficiencyScore / 100);
+            
+            let outcome;
+            if (random < adjustedChance) {
+                outcome = 'approved';
+            } else if (random < adjustedChance + 0.15) {
+                outcome = 'pended';
+            } else {
+                outcome = 'denied';
+            }
+
+            gameState.outcome = outcome;
+            gameState.currentStep = 5;
+            
+            showOutcome(outcome);
+        }
+
+        function showOutcome(outcome) {
+            updateProgressTracker();
+            
+            const payerLane = document.getElementById('payer-lane');
+            
+            if (outcome === 'approved') {
+                gameState.timeline.push({
+                    day: gameState.daysElapsed,
+                    event: 'Prior authorization APPROVED - Authorization number issued',
+                    actor: 'Payer'
+                });
+
+                payerLane.innerHTML = `
+                    <div class="case-card" style="border-color: #0288d1; background: #e1f5fe;">
+                        <h4>✅ APPROVED</h4>
+                        <div class="case-info">Authorization #: PA-${Math.random().toString(36).substr(2, 9).toUpperCase()}</div>
+                        <div class="case-info">Valid: 90 days</div>
+                        <div class="case-info">Medical necessity confirmed</div>
+                        <div class="case-info" style="margin-top: 10px; color: #0277bd;">
+                            <strong>Patient may proceed with scheduled service!</strong>
+                        </div>
+                    </div>
+                `;
+
+                showEducation('approval');
+                triggerCelebration();
+                
+                setTimeout(() => {
+                    showSummary();
+                }, 2000);
+                
+            } else if (outcome === 'pended') {
+                gameState.timeline.push({
+                    day: gameState.daysElapsed,
+                    event: 'Request PENDED - Additional information required',
+                    actor: 'Payer'
+                });
+
+                payerLane.innerHTML = `
+                    <div class="case-card" style="border-color: #1976d2; background: #e3f2fd;">
+                        <h4>⏸️ PENDED</h4>
+                        <div class="case-info">Additional information needed</div>
+                        <div class="case-info">Missing: Updated clinical notes</div>
+                        <div class="case-info">Response required within 10 days</div>
+                    </div>
+                `;
+
+                showEducation('pend');
+                setupPendedResponse();
+                
+            } else {
+                gameState.timeline.push({
+                    day: gameState.daysElapsed,
+                    event: 'Prior authorization DENIED',
+                    actor: 'Payer'
+                });
+
+                payerLane.innerHTML = `
+                    <div class="case-card" style="border-color: #1565c0; background: #e3f2fd;">
+                        <h4>❌ DENIED</h4>
+                        <div class="case-info">Reason: Does not meet coverage criteria</div>
+                        <div class="case-info">Appeal rights available</div>
+                        <div class="case-info">Peer-to-peer option available</div>
+                    </div>
+                `;
+
+                showEducation('denial');
+                setupDenialResponse();
+            }
+        }
+
+        function setupPendedResponse() {
+            document.getElementById('current-step-name').textContent = 'Respond to Pended Request';
+            
+            const actionsDiv = document.getElementById('action-buttons');
+            actionsDiv.innerHTML = `
+                <button class="btn-primary" onclick="submitAdditionalInfo()">Submit Additional Information</button>
+                <button class="btn-secondary" onclick="restartSimulation()">Restart Simulation</button>
+            `;
+        }
+
+        function submitAdditionalInfo() {
+            addDays(3);
+            reduceEfficiency(5);
+            
+            gameState.timeline.push({
+                day: gameState.daysElapsed,
+                event: 'Additional information submitted to payer',
+                actor: 'Provider'
+            });
+
+            // Re-review with better odds
+            const random = Math.random();
+            if (random < 0.85) {
+                gameState.outcome = 'approved';
+                showOutcome('approved');
+            } else {
+                gameState.outcome = 'denied';
+                showOutcome('denied');
+            }
+        }
+
+        function setupDenialResponse() {
+            document.getElementById('current-step-name').textContent = 'Respond to Denial';
+            
+            const actionsDiv = document.getElementById('action-buttons');
+            actionsDiv.innerHTML = `
+                <button class="btn-primary" onclick="showAppealOptions()">Review Appeal Options</button>
+                <button class="btn-secondary" onclick="restartSimulation()">Restart Simulation</button>
+            `;
+        }
+
+        function showAppealOptions() {
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            
+            modalContent.innerHTML = `
+                <h3>Appeal Options</h3>
+                <p>You have several options to appeal this denial:</p>
+                <div class="review-options">
+                    <div class="review-option" onclick="fileAppeal()">
+                        <h4>📢 File Formal Appeal</h4>
+                        <p>Submit additional documentation and a letter explaining why the decision should be reversed. Timeline: 7-14 days.</p>
+                    </div>
+                    <div class="review-option" onclick="requestPeerToPeer()">
+                        <h4>👥 Request Peer-to-Peer Review</h4>
+                        <p>Speak directly with the payer's medical director to discuss the case. Often faster and more effective.</p>
+                    </div>
+                    <div class="review-option" onclick="acceptDenial()">
+                        <h4>✋ Accept Denial</h4>
+                        <p>End the process and explore alternative treatment options with the patient.</p>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function fileAppeal() {
+            closeModal();
+            addDays(10);
+            reduceEfficiency(10);
+            
+            gameState.timeline.push({
+                day: gameState.daysElapsed,
+                event: 'Formal appeal filed with additional documentation',
+                actor: 'Provider'
+            });
+
+            showEducation('appeal');
+
+            const random = Math.random();
+            if (random < 0.6) {
+                gameState.outcome = 'approved';
+                setTimeout(() => showOutcome('approved'), 2000);
+            } else {
+                gameState.timeline.push({
+                    day: gameState.daysElapsed + 10,
+                    event: 'Appeal denied - exhausted internal appeals',
+                    actor: 'Payer'
+                });
+                setTimeout(() => showSummary(), 2000);
+            }
+        }
+
+        function requestPeerToPeer() {
+            closeModal();
+            addDays(5);
+            reduceEfficiency(5);
+            
+            gameState.timeline.push({
+                day: gameState.daysElapsed,
+                event: 'Peer-to-peer review conducted with payer medical director',
+                actor: 'Provider'
+            });
+
+            showEducation('peerToPeer');
+
+            const random = Math.random();
+            if (random < 0.75) {
+                gameState.outcome = 'approved';
+                setTimeout(() => showOutcome('approved'), 2000);
+            } else {
+                gameState.timeline.push({
+                    day: gameState.daysElapsed + 5,
+                    event: 'Peer-to-peer unsuccessful - denial upheld',
+                    actor: 'Payer'
+                });
+                setTimeout(() => showSummary(), 2000);
+            }
+        }
+
+        function acceptDenial() {
+            closeModal();
+            gameState.timeline.push({
+                day: gameState.daysElapsed,
+                event: 'Denial accepted - exploring alternative treatment options',
+                actor: 'Provider'
+            });
+            setTimeout(() => showSummary(), 1000);
+        }
+
+        // ===========================
+        // SUMMARY
+        // ===========================
+        function showSummary() {
+            const summaryPanel = document.getElementById('summary-panel');
+            
+            let outcomeText = 'Unknown';
+            let outcomeColor = '#666';
+            
+            if (gameState.outcome === 'approved') {
+                outcomeText = 'APPROVED ✅';
+                outcomeColor = '#0288d1';
+            } else if (gameState.outcome === 'denied') {
+                outcomeText = 'DENIED ❌';
+                outcomeColor = '#1565c0';
+            } else if (gameState.outcome === 'pended') {
+                outcomeText = 'PENDED ⏸️';
+                outcomeColor = '#1976d2';
+            }
+            
+            let timelineHTML = '';
+            gameState.timeline.forEach(item => {
+                timelineHTML += `
+                    <div class="timeline-item">
+                        <strong>Day ${item.day}:</strong> ${item.event}
+                        <div style="color: #666; font-size: 0.9em; margin-top: 5px;">${item.actor}</div>
+                    </div>
+                `;
+            });
+            
+            summaryPanel.innerHTML = `
+                <h2>🎯 Workflow Summary</h2>
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="summary-stat-value" style="color: ${outcomeColor}">${outcomeText}</div>
+                        <div class="summary-stat-label">Final Outcome</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${gameState.daysElapsed}</div>
+                        <div class="summary-stat-label">Total Days</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${gameState.efficiencyScore}</div>
+                        <div class="summary-stat-label">Efficiency Score</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${gameState.documentsCollected.length}</div>
+                        <div class="summary-stat-label">Documents Submitted</div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 30px; color: #1565c0;">Workflow Timeline</h3>
+                <div class="timeline">
+                    ${timelineHTML}
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn-primary" onclick="restartSimulation()" style="font-size: 1.2em; padding: 15px 40px;">
+                        🔄 Start New Simulation
+                    </button>
+                </div>
+            `;
+            
+            summaryPanel.classList.add('active');
+            
+            // Hide action buttons
+            document.getElementById('action-buttons').innerHTML = '';
+        }
+
+        // ===========================
+        // HELPER FUNCTIONS
+        // ===========================
+        function showPatientCase() {
+            const patientLane = document.getElementById('patient-lane');
+            const scenario = gameState.currentScenario;
+            
+            patientLane.innerHTML = `
+                <div class="case-card">
+                    <h4>${scenario.title}</h4>
+                    <div class="case-info"><strong>Diagnosis:</strong> ${scenario.diagnosis}</div>
+                    <div class="case-info"><strong>Procedure:</strong> ${scenario.procedure}</div>
+                    <div class="case-info"><strong>Urgency:</strong> ${scenario.urgency}</div>
+                    <div class="case-info" style="margin-top: 10px; color: #1565c0;">
+                        <strong>Status:</strong> Awaiting provider evaluation
+                    </div>
+                </div>
+            `;
+        }
+
+        function showEducation(key) {
+            const panel = document.getElementById('education-panel');
+            const content = EDUCATION[key];
+            
+            if (content) {
+                panel.innerHTML = `
+                    <h3>${content.title}</h3>
+                    <p>${content.content}</p>
+                `;
+                panel.classList.add('active');
+                
+                // Auto-hide after 10 seconds
+                setTimeout(() => {
+                    panel.classList.remove('active');
+                }, 10000);
+            }
+        }
+
+        function updateProgressTracker() {
+            const steps = ['step-select', 'step-assess', 'step-documents', 'step-submit', 'step-review', 'step-outcome'];
+            
+            steps.forEach((stepId, index) => {
+                const stepEl = document.getElementById(stepId);
+                stepEl.classList.remove('active', 'current');
+                
+                if (index < gameState.currentStep) {
+                    stepEl.classList.add('active');
+                } else if (index === gameState.currentStep) {
+                    stepEl.classList.add('current');
+                }
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('days-elapsed').textContent = gameState.daysElapsed;
+            document.getElementById('efficiency-score').textContent = gameState.efficiencyScore;
+            
+            const total = gameState.currentScenario ? gameState.currentScenario.requiredDocuments.length : 0;
+            const collected = gameState.documentsCollected.length;
+            document.getElementById('documents-collected').textContent = `${collected}/${total}`;
+        }
+
+        function addDays(days) {
+            gameState.daysElapsed += days;
+            updateStats();
+        }
+
+        function reduceEfficiency(points) {
+            gameState.efficiencyScore = Math.max(0, gameState.efficiencyScore - points);
+            updateStats();
+        }
+
+        function triggerCelebration() {
+            const celebrationDiv = document.getElementById('celebration');
+            celebrationDiv.innerHTML = '';
+            
+            const colors = ['#1976d2', '#42a5f5', '#1e88e5', '#64b5f6', '#90caf9'];
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    celebrationDiv.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 50);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function restartSimulation() {
+            // Reset game state
+            gameState = {
+                currentScenario: null,
+                currentStep: 0,
+                daysElapsed: 0,
+                efficiencyScore: 100,
+                documentsCollected: [],
+                timeline: [],
+                outcome: null,
+                steps: [
+                    'selectScenario',
+                    'medicalNecessity',
+                    'documents',
+                    'submission',
+                    'payerReview',
+                    'outcome'
+                ]
+            };
+
+            // Clear lanes
+            document.getElementById('patient-lane').innerHTML = '';
+            document.getElementById('provider-lane').innerHTML = '';
+            document.getElementById('payer-lane').innerHTML = '';
+
+            // Hide workflow, show scenario selection
+            document.getElementById('workflow-area').classList.remove('active');
+            document.getElementById('scenario-selection').classList.add('active');
+
+            // Hide panels
+            document.getElementById('education-panel').classList.remove('active');
+            document.getElementById('summary-panel').classList.remove('active');
+
+            // Reset progress tracker
+            updateProgressTracker();
+            updateStats();
+
+            // Re-render scenarios
+            renderScenarioSelection();
+        }
+
+        function setupEventListeners() {
+            // Close modal on background click
+            document.getElementById('modal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+        }
+
+        // ===========================
+        // START APPLICATION
+        // ===========================
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
